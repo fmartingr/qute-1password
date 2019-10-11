@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "qute_1password"
+version = "0.1.0"
+description = "Userscript to help fill credentials with the 1password CLI"
+authors = ["Felipe Martin <me@fmartingr.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+
+[tool.poetry.dev-dependencies]
+black = {version = "^18.3-alpha.0", allows-prereleases = true}
+flake8 = "^3.7"
+isort = "^4.3"
+pre-commit = "^1.18"
+rope = "^0.14.0"
+ipdb = "^0.12.2"
+pylint = "^2.4"
+mypy = "^0.730.0"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
