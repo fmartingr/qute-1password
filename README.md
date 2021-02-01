@@ -19,7 +19,7 @@ Right now it defaults to the `my` account, will be configurable in the future.
 usage: qute_1pass.py [-h] [--auto-submit] [--cache-session] command
 
 positional arguments:
-  command          fill_credentials, fill_totp
+  command          fill_credentials, fill_totp, fill_username, fill_password
 
 optional arguments:
   -h, --help       show this help message and exit
