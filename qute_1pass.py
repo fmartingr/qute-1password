@@ -36,7 +36,9 @@ CMD_OP_GET_TOTP = "op get totp {uuid} --session={session_id}"
 QUTE_FIFO = os.environ["QUTE_FIFO"]
 
 parser = argparse.ArgumentParser()
-parser.add_argument("command", help="fill_credentials, fill_totp")
+parser.add_argument(
+    "command", help="fill_credentials, fill_totp, fill_username, fill_password"
+)
 parser.add_argument(
     "--auto-submit", help="Auto submit after filling", action="store_true"
 )
@@ -79,6 +81,12 @@ class Qute:
         cls.fake_key(username)
         cls.fake_key("<TAB>")
         cls.fake_key(password)
+        if submit:
+            cls.fake_key("<Return>")
+
+    @classmethod
+    def fill_single_field_tabmode(cls, value, submit=False):
+        cls.fake_key(value)
         if submit:
             cls.fake_key("<Return>")
 
@@ -226,7 +234,7 @@ class OnePass:
             )
             Qute.message_warning("Filled incomplete credentials")
 
-        return username, password
+        return {"username": username, "password": password}
 
     @classmethod
     def get_totp(cls, uuid):
@@ -259,17 +267,38 @@ class CLI:
             sys.exit(0)
         return item
 
-    def fill_credentials(self):
-        item = self._get_item()
-        username, password = OnePass.get_credentials(item)
-        Qute.fill_credentials_tabmode(
-            username, password, submit=self.arguments.auto_submit
-        )
-        # Store a reference to this items in case we need a quick reference to the UUID
-        # to get the TOTP later
+    def _store_last_item(self, item):
+        """
+        Stores a reference to an item to easily get single information from it (password, TOTP)
+        right after filling the username or credentials.
+        """
         last_item = {"host": extract_host(os.environ["QUTE_URL"]), "uuid": item["uuid"]}
         with open(LAST_ITEM_PATH, "w") as handler:
             handler.write(json.dumps(last_item))
+
+    def _fill_single_field(self, field):
+        item = self._get_item()
+        credentials = OnePass.get_credentials(item)
+        Qute.fill_single_field_tabmode(
+            credentials[field], submit=self.arguments.auto_submit
+        )
+        return item
+
+    def fill_username(self):
+        item = self._fill_single_field("username")
+        self._store_last_item(item)
+
+    def fill_password(self):
+        item = self._fill_single_field("password")
+        self._store_last_item(item)
+
+    def fill_credentials(self):
+        item = self._get_item()
+        credentials = OnePass.get_credentials(item)
+        Qute.fill_credentials_tabmode(
+            *credentials.values(), submit=self.arguments.auto_submit
+        )
+        self._store_last_item(item)
 
     def fill_totp(self):
         # Check last item first
