@@ -134,7 +134,7 @@ class OnePass:
             password = execute_command(CMD_PASSWORD_PROMPT)
         except ExecuteError:
             Qute.message_error("Error calling pinentry program")
-            sys.exit(1)
+            sys.exit(0)
 
         try:
             session_id = execute_command(
@@ -142,7 +142,7 @@ class OnePass:
             )
         except ExecuteError:
             Qute.message_error("Login error")
-            sys.exit(1)
+            sys.exit(0)
 
         if arguments.cache_session:
             with open(SESSION_PATH, "w") as handler:
@@ -266,7 +266,9 @@ class CLI:
         try:
             item = OnePass.get_item_for_url(os.environ["QUTE_URL"])
         except OnePass.NoItemsFoundError as error:
-            Qute.message_warning(error)
+            Qute.message_warning("No item found for this site")
+            logger.error(f"No item found for site: {os.environ['QUTE_URL']}")
+            logger.error(error)
             sys.exit(0)
         return item
 
