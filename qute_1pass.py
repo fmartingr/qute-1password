@@ -47,6 +47,11 @@ parser.add_argument(
     help="Cache 1password session for 30 minutes",
     action="store_true",
 )
+parser.add_argument(
+    "--allow-insecure-sites",
+    help="Allow filling credentials on insecure sites",
+    action="store_true",
+)
 
 
 class Qute:
@@ -325,5 +330,15 @@ class CLI:
 
 if __name__ == "__main__":
     arguments = parser.parse_args()
+
+    # Prevent filling credentials in non-secure sites if not explicitly allwoed
+    if not arguments.allow_insecure_sites:
+        if urlsplit(os.environ["QUTE_URL"])[0] != "https":
+            Qute.message_error(
+                "Trying to fill a non-secure site. If you want to allow it add the --allow-insecure-sites flag."
+            )
+            logger.error("Refusing to fill credentials on non-secure sites")
+            sys.exit(0)
+
     cli = CLI(arguments)
     sys.exit(cli.run())
