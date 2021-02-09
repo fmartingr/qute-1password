@@ -29,7 +29,7 @@ CMD_ITEM_SELECT = "echo -e '{items}' | rofi -dmenu -p 'Select login'"
 CMD_LIST_PROMPT = "echo {items} | rofi -dmenu"
 
 CMD_OP_LOGIN = "echo -n {password} | op signin {subdomain} --output=raw"
-CMD_OP_LIST_ITEMS = "op list items --session={session_id}"
+CMD_OP_LIST_ITEMS = "op list items --categories Login --session={session_id}"
 CMD_OP_GET_ITEM = "op get item {uuid} --session={session_id}"
 CMD_OP_GET_TOTP = "op get totp {uuid} --session={session_id}"
 
@@ -187,9 +187,7 @@ class OnePass:
         host = extract_host(url)
 
         def filter_host(item):
-            """Exclude items that does not match host and are not a login"""
-            if item["templateUuid"] != "001":
-                return False
+            """Exclude items that does not match host """
             if "url" in item["overview"]:
                 return host in item["overview"]["url"]
             return False
