@@ -187,9 +187,9 @@ class OnePass:
         host = extract_host(url)
 
         def filter_host(item):
-            """Exclude items that does not match host """
-            if "url" in item["overview"]:
-                return host in item["overview"]["url"]
+            """Exclude items that does not match host on any configured URL"""
+            if "URLs" in item["overview"]:
+                return any(filter(lambda x: host in x["u"], item["overview"]["URLs"]))
             return False
 
         items = cls.list_items()
