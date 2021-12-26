@@ -28,7 +28,7 @@ CMD_PASSWORD_PROMPT = (
 CMD_ITEM_SELECT = "echo -e '{items}' | rofi -dmenu -p 'Select login'"
 CMD_LIST_PROMPT = "echo {items} | rofi -dmenu"
 
-CMD_OP_LOGIN = "echo -n {password} | op signin {subdomain} --output=raw"
+CMD_OP_LOGIN = "echo -n '{password}' | op signin {subdomain} --output=raw"
 CMD_OP_LIST_ITEMS = "op list items --categories Login --session={session_id}"
 CMD_OP_GET_ITEM = "op get item {uuid} --session={session_id}"
 CMD_OP_GET_TOTP = "op get totp {uuid} --session={session_id}"
