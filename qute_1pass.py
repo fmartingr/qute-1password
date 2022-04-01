@@ -223,9 +223,13 @@ class OnePass:
             raise cls.NoItemsFoundError(f"No items found for host {host}")
 
         try:
-            credential = pipe_commands(
-                ["echo", "\n".join(mapping.keys())], CMD_ITEM_SELECT
-            )
+            # if there is a single item, use that instead of prompting
+            if len(mapping) == 1:
+                credential = list(mapping.keys())[0]
+            else:
+                credential = pipe_commands(
+                    ["echo", "\n".join(mapping.keys())], CMD_ITEM_SELECT
+                )
         except ExecuteError:
             pass
 
