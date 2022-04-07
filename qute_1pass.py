@@ -14,6 +14,7 @@ logger = logging.getLogger("qute_1pass")
 
 CACHE_DIR = os.path.join(tempfile.gettempdir(), "qute_1pass")
 os.makedirs(CACHE_DIR, exist_ok=True)
+os.chmod(CACHE_DIR, 0o750)
 
 SESSION_PATH = os.path.join(CACHE_DIR, "session")
 SESSION_DURATION = timedelta(minutes=30)
@@ -50,6 +51,11 @@ parser.add_argument(
 parser.add_argument(
     "--allow-insecure-sites",
     help="Allow filling credentials on insecure sites",
+    action="store_true",
+)
+parser.add_argument(
+    "--cache",
+    help="store and use cached information",
     action="store_true",
 )
 
@@ -147,6 +153,7 @@ class OnePass:
         if arguments.cache_session:
             with open(SESSION_PATH, "w") as handler:
                 handler.write(session_id)
+            os.chmod(SESSION_PATH, 0o640)
 
         return session_id
 
@@ -280,6 +287,7 @@ class CLI:
         last_item = {"host": extract_host(os.environ["QUTE_URL"]), "uuid": item["uuid"]}
         with open(LAST_ITEM_PATH, "w") as handler:
             handler.write(json.dumps(last_item))
+        os.chmod(LAST_ITEM_PATH, 0o640)
 
     def _fill_single_field(self, field):
         item = self._get_item()
@@ -332,6 +340,11 @@ class CLI:
 
 if __name__ == "__main__":
     arguments = parser.parse_args()
+
+    if arguments.cache:
+        # add --cache to cacheable commands with
+        CMD_OP_LIST_ITEMS += " --cache"
+        CMD_OP_GET_ITEM += " --cache"
 
     # Prevent filling credentials in non-secure sites if not explicitly allwoed
     if not arguments.allow_insecure_sites:
