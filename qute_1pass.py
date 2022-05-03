@@ -23,16 +23,16 @@ LAST_ITEM_PATH = os.path.join(CACHE_DIR, "last_item")
 LAST_ITEM_DURATION = timedelta(seconds=10)
 
 OP_SUBDOMAIN = "my"
-CMD_PASSWORD_PROMPT = (
-    "rofi -password -dmenu -p 'Vault Password' -l 0 -sidebar -width 20"
-)
-CMD_ITEM_SELECT = "echo -e '{items}' | rofi -dmenu -p 'Select login'"
-CMD_LIST_PROMPT = "echo {items} | rofi -dmenu"
+CMD_PASSWORD_PROMPT = [
+    "rofi", "-password", "-dmenu", "-p", "Vault Password", "-l", "0", "-sidebar", "-width", "20"
+]
+CMD_LIST_PROMPT = ["rofi", "-dmenu"]
+CMD_ITEM_SELECT = CMD_LIST_PROMPT + ["-p", "Select login"]
 
-CMD_OP_LOGIN = "echo -n '{password}' | op signin {subdomain} --output=raw"
-CMD_OP_LIST_ITEMS = "op list items --categories Login --session={session_id}"
-CMD_OP_GET_ITEM = "op get item {uuid} --session={session_id}"
-CMD_OP_GET_TOTP = "op get totp {uuid} --session={session_id}"
+CMD_OP_LOGIN = ["op", "signin", "--output=raw"]
+CMD_OP_LIST_ITEMS = "op list items --categories Login --session {session_id}"
+CMD_OP_GET_ITEM = "op get item --session {session_id} {uuid}"
+CMD_OP_GET_TOTP = "op get totp --session {session_id} {uuid}"
 
 QUTE_FIFO = os.environ["QUTE_FIFO"]
 
@@ -116,13 +116,21 @@ class ExecuteError(Exception):
 
 def execute_command(command):
     """Executes a command, mainly used to launch commands for user input and the op cli"""
-    result = subprocess.run(command, shell=True, capture_output=True, encoding="utf-8")
+    result = subprocess.run(command, capture_output=True, encoding="utf-8")
 
     if result.returncode != 0:
         logger.error(result.stderr)
         raise ExecuteError(result.stderr)
 
     return result.stdout.strip()
+
+
+def pipe_commands(cmd1, cmd2):
+    p1 = subprocess.Popen(cmd1, stdout=subprocess.PIPE)
+    p2 = subprocess.Popen(cmd2, stdin=p1.stdout, stdout=subprocess.PIPE)
+    p1.stdout.close()
+
+    return p2.communicate()[0].decode("utf-8").strip()
 
 
 def extract_host(url):
@@ -143,9 +151,9 @@ class OnePass:
             sys.exit(0)
 
         try:
-            session_id = execute_command(
-                CMD_OP_LOGIN.format(password=password, subdomain=OP_SUBDOMAIN)
-            )
+            session_id = pipe_commands(
+                ["echo", "-n", password],
+                CMD_OP_LOGIN + [OP_SUBDOMAIN])
         except ExecuteError:
             Qute.message_error("Login error")
             sys.exit(0)
@@ -177,7 +185,7 @@ class OnePass:
     @classmethod
     def list_items(cls):
         session_id = cls.get_session()
-        result = execute_command(CMD_OP_LIST_ITEMS.format(session_id=session_id))
+        result = execute_command(CMD_OP_LIST_ITEMS.format(session_id=session_id).split())
         parsed = json.loads(result)
         return parsed
 
@@ -186,7 +194,7 @@ class OnePass:
         session_id = cls.get_session()
         try:
             result = execute_command(
-                CMD_OP_GET_ITEM.format(uuid=uuid, session_id=session_id)
+                CMD_OP_GET_ITEM.format(uuid=uuid, session_id=session_id).split()
             )
         except ExecuteError:
             logger.error("Error retrieving credential", exc_info=True)
@@ -215,8 +223,8 @@ class OnePass:
             raise cls.NoItemsFoundError(f"No items found for host {host}")
 
         try:
-            credential = execute_command(
-                CMD_ITEM_SELECT.format(items="\n".join(mapping.keys()))
+            credential = pipe_commands(
+                ["echo", "\n".join(mapping.keys())], CMD_ITEM_SELECT
             )
         except ExecuteError:
             pass
@@ -251,7 +259,7 @@ class OnePass:
         session_id = cls.get_session()
         try:
             return execute_command(
-                CMD_OP_GET_TOTP.format(uuid=uuid, session_id=session_id)
+                CMD_OP_GET_TOTP.format(uuid=uuid, session_id=session_id).split()
             )
         except ExecuteError:
             logger.error("Error retrieving TOTP", exc_info=True)
