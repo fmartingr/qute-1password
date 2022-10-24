@@ -28,6 +28,7 @@ CMD_PASSWORD_PROMPT = [
 CMD_LIST_PROMPT = ["rofi", "-dmenu"]
 CMD_ITEM_SELECT = CMD_LIST_PROMPT + ["-p", "Select login"]
 
+CMD_OP_CHECK_LOGIN = ["op", "whoami"]
 CMD_OP_LOGIN = ["op", "signin", "--raw"]
 CMD_OP_LIST_ITEMS = "op item list --categories Login --session {session_id} --format=json"
 CMD_OP_GET_ITEM = "op item get --session {session_id} {uuid} --format=json"
@@ -55,6 +56,11 @@ parser.add_argument(
 parser.add_argument(
     "--cache",
     help="store and use cached information",
+    action="store_true",
+)
+parser.add_argument(
+    "--biometric",
+    help="Use biometric unlock - don't ask for password",
     action="store_true",
 )
 
@@ -143,26 +149,35 @@ class OnePass:
 
     @classmethod
     def login(cls):
-        try:
-            password = execute_command(CMD_PASSWORD_PROMPT)
-        except ExecuteError:
-            Qute.message_error("Error calling pinentry program")
-            sys.exit(0)
+        if arguments.biometric:
+            try:
+                execute_command(CMD_OP_CHECK_LOGIN)
+            except ExecuteError:
+                try:
+                    execute_command(CMD_OP_LOGIN)
+                except ExecuteError:
+                    Qute.message_error("Login error")
+                    sys.exit(0)
+            return "0"
+        else:
+            try:
+                password = execute_command(CMD_PASSWORD_PROMPT)
+            except ExecuteError:
+                Qute.message_error("Error calling pinentry program")
+                sys.exit(0)
+            try:
+                session_id = pipe_commands(
+                    ["echo", "-n", password],
+                    CMD_OP_LOGIN)
+            except ExecuteError:
+                Qute.message_error("Login error")
+                sys.exit(0)
 
-        try:
-            session_id = pipe_commands(
-                ["echo", "-n", password],
-                CMD_OP_LOGIN)
-        except ExecuteError:
-            Qute.message_error("Login error")
-            sys.exit(0)
-
-        if arguments.cache_session:
-            with open(SESSION_PATH, "w") as handler:
-                handler.write(session_id)
-            os.chmod(SESSION_PATH, 0o640)
-
-        return session_id
+            if arguments.cache_session:
+                with open(SESSION_PATH, "w") as handler:
+                    handler.write(session_id)
+                os.chmod(SESSION_PATH, 0o640)
+            return session_id
 
     @classmethod
     def get_session(cls):
