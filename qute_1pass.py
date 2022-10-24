@@ -22,17 +22,16 @@ SESSION_DURATION = timedelta(minutes=30)
 LAST_ITEM_PATH = os.path.join(CACHE_DIR, "last_item")
 LAST_ITEM_DURATION = timedelta(seconds=10)
 
-OP_SUBDOMAIN = "my"
 CMD_PASSWORD_PROMPT = [
     "rofi", "-password", "-dmenu", "-p", "Vault Password", "-l", "0", "-sidebar", "-width", "20"
 ]
 CMD_LIST_PROMPT = ["rofi", "-dmenu"]
 CMD_ITEM_SELECT = CMD_LIST_PROMPT + ["-p", "Select login"]
 
-CMD_OP_LOGIN = ["op", "signin", "--output=raw"]
-CMD_OP_LIST_ITEMS = "op list items --categories Login --session {session_id}"
-CMD_OP_GET_ITEM = "op get item --session {session_id} {uuid}"
-CMD_OP_GET_TOTP = "op get totp --session {session_id} {uuid}"
+CMD_OP_LOGIN = ["op", "signin", "--raw"]
+CMD_OP_LIST_ITEMS = "op item list --categories Login --session {session_id} --format=json"
+CMD_OP_GET_ITEM = "op item get --session {session_id} {uuid} --format=json"
+CMD_OP_GET_TOTP = "op item get --otp --session {session_id} {uuid}"
 
 QUTE_FIFO = os.environ["QUTE_FIFO"]
 
@@ -153,7 +152,7 @@ class OnePass:
         try:
             session_id = pipe_commands(
                 ["echo", "-n", password],
-                CMD_OP_LOGIN + [OP_SUBDOMAIN])
+                CMD_OP_LOGIN)
         except ExecuteError:
             Qute.message_error("Login error")
             sys.exit(0)
@@ -208,14 +207,14 @@ class OnePass:
 
         def filter_host(item):
             """Exclude items that does not match host on any configured URL"""
-            if "URLs" in item["overview"]:
-                return any(filter(lambda x: host in x["u"], item["overview"]["URLs"]))
+            if "urls" in item:
+                return any(filter(lambda x: host in x["href"], item["urls"]))
             return False
 
         items = cls.list_items()
         filtered = filter(filter_host, items)
         mapping = {
-            f"{host}: {item['overview']['title']} ({item['uuid']})": item
+            f"{host}: {item['title']} ({item['id']})": item
             for item in filtered
         }
 
@@ -233,15 +232,15 @@ class OnePass:
             # Cancelled
             return
 
-        return cls.get_item(mapping[credential]["uuid"])
+        return cls.get_item(mapping[credential]["id"])
 
     @classmethod
     def get_credentials(cls, item):
         username = password = None
-        for field in item["details"]["fields"]:
-            if field.get("designation") == "username":
+        for field in item["fields"]:
+            if field.get("purpose") == "USERNAME":
                 username = field["value"]
-            if field.get("designation") == "password":
+            if field.get("purpose") == "PASSWORD":
                 password = field["value"]
 
         if username is None or password is None:
@@ -292,7 +291,7 @@ class CLI:
         Stores a reference to an item to easily get single information from it (password, TOTP)
         right after filling the username or credentials.
         """
-        last_item = {"host": extract_host(os.environ["QUTE_URL"]), "uuid": item["uuid"]}
+        last_item = {"host": extract_host(os.environ["QUTE_URL"]), "id": item["id"]}
         with open(LAST_ITEM_PATH, "w") as handler:
             handler.write(json.dumps(last_item))
         os.chmod(LAST_ITEM_PATH, 0o640)
@@ -338,7 +337,7 @@ class CLI:
         if not item:
             item = self._get_item()
 
-        totp = OnePass.get_totp(item["uuid"])
+        totp = OnePass.get_totp(item["id"])
         logger.error(totp)
         Qute.fill_totp(totp)
 
