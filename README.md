@@ -6,9 +6,10 @@ Qutebrowser userscript to fill 1password credentials
 
 ## Dependencies
 
+
 - [The 1Password CLI](https://support.1password.com/command-line-getting-started/)
   Ensure you have it installed and set up. Follow the official documentation.
-> ℹ️ **Note**: Only the 1Password CLI v2 is supported.
+  > ℹ️ **Note**: Only the 1Password CLI v2 is supported from now own. If you're using v1 please use the [v1.0.0 release](https://github.com/fmartingr/qute-1password/releases/tag/v1.0.0).
 - [rofi](https://github.com/davatorium/rofi) to ask for password and list items
 
 ## How it works
