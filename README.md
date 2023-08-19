@@ -1,5 +1,7 @@
 # Qute-1Password
 
+# ⚠️ ARCHIVED. Please use the built-in [qute-1pass](https://github.com/qutebrowser/qutebrowser/blob/main/misc/userscripts/qute-1pass) userscript.
+
 Qutebrowser userscript to fill 1password credentials
 
 ![Oh, stop it! you...](.readme/stopityou.png)
